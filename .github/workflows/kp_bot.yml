@@ -1,0 +1,42 @@
+name: KP bot
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'   # GitHub ovo tretira kao "najbolji trud", moze da kasni
+  workflow_dispatch:         # omogucava rucno pokretanje dugmetom "Run workflow"
+
+permissions:
+  contents: write   # potrebno da bot moze da sacuva vidjeni_oglasi.json nazad u repo
+
+jobs:
+  proveri-oglase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Preuzmi repozitorijum
+        uses: actions/checkout@v4
+
+      - name: Podesi Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instaliraj biblioteke
+        run: pip install -r requirements.txt
+
+      - name: Pokreni bota
+        run: python kp_bot.py
+        env:
+          SSD_WEBHOOK_URL: ${{ secrets.SSD_WEBHOOK_URL }}
+          RAM_WEBHOOK_URL: ${{ secrets.RAM_WEBHOOK_URL }}
+
+      - name: Sacuvaj listu vidjenih oglasa nazad u repozitorijum
+        run: |
+          git config user.name "kp-bot"
+          git config user.email "kp-bot@users.noreply.github.com"
+          git add vidjeni_oglasi.json
+          if git diff --staged --quiet; then
+            echo "Nema promena, ne komitujem."
+          else
+            git commit -m "update seen ads"
+            git push
+          fi
